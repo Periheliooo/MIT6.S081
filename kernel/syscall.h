@@ -31,3 +31,6 @@
 #define SYS_munmap    28
 #define SYS_connect   29
 #define SYS_pgaccess  30
+
+// System calls for test
+#define SYS_vmprint   31

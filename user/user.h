@@ -33,6 +33,8 @@ int pgaccess(void *base, int len, void *mask);
 int ugetpid(void);
 #endif
 
+int vmprint(void);
+
 // ulib.c
 int stat(const char*, struct stat*);
 char* strcpy(char*, const char*);
