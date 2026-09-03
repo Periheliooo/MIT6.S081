@@ -333,10 +333,15 @@ sfence_vma()
 
 
 #define PGSIZE 4096 // bytes per page
+#define SUPERPGSIZE (1L << 21) // superpage
+
 #define PGSHIFT 12  // bits of offset within a page
 
 #define PGROUNDUP(sz)  (((sz)+PGSIZE-1) & ~(PGSIZE-1))
 #define PGROUNDDOWN(a) (((a)) & ~(PGSIZE-1))
+
+#define SUPERPGROUNDUP(sz)  (((sz)+SUPERPGSIZE-1) & ~(SUPERPGSIZE-1))
+#define SUPERPGROUNDDOWN(a) (((a)) & ~(SUPERPGSIZE-1))  
 
 #define PTE_V (1L << 0) // valid
 #define PTE_R (1L << 1)

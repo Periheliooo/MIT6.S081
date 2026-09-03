@@ -37,7 +37,24 @@ kvmmake(void)
   kvmmap(kpgtbl, KERNBASE, KERNBASE, (uint64)etext-KERNBASE, PTE_R | PTE_X);
 
   // map kernel data and the physical RAM we'll make use of.
-  kvmmap(kpgtbl, (uint64)etext, (uint64)etext, PHYSTOP-(uint64)etext, PTE_R | PTE_W);
+  // kvmmap(kpgtbl, (uint64)etext, (uint64)etext, PHYSTOP-(uint64)etext, PTE_R | PTE_W);
+  uint64 start = (uint64)etext;
+
+  // 向上取整到下一个2MB边界
+  uint64 super_start =
+      (start + SUPERPGSIZE - 1) & ~(SUPERPGSIZE - 1);
+
+  // 开头不对齐部分使用普通页
+  if(start < super_start){
+    kvmmap(kpgtbl, start, start,
+          super_start - start, PTE_R | PTE_W);
+  }
+
+  // 剩余部分使用2MB超级页
+  if(super_start < PHYSTOP){
+    kvmsupermap(kpgtbl, super_start, super_start,
+                PHYSTOP - super_start, PTE_R | PTE_W);
+  }
 
   // map the trampoline for trap entry/exit to
   // the highest virtual address in the kernel.
@@ -97,6 +114,26 @@ walk(pagetable_t pagetable, uint64 va, int alloc)
   return &pagetable[PX(0, va)];
 }
 
+pte_t *
+walk_level(pagetable_t pagetable, uint64 va, int target_level, int alloc)
+{
+  if(va >= MAXVA)
+    panic("walk");
+
+  for(int level = 2; level > target_level; level--) {
+    pte_t *pte = &pagetable[PX(level, va)];
+    if(*pte & PTE_V) {
+      pagetable = (pagetable_t)PTE2PA(*pte);
+    } else {
+      if(!alloc || (pagetable = (pde_t*)kalloc()) == 0)
+        return 0;
+      memset(pagetable, 0, PGSIZE);
+      *pte = PA2PTE(pagetable) | PTE_V;
+    }
+  }
+  return &pagetable[PX(target_level, va)];
+}
+
 // Look up a virtual address, return the physical address,
 // or 0 if not mapped.
 // Can only be used to look up user pages.
@@ -130,6 +167,13 @@ kvmmap(pagetable_t kpgtbl, uint64 va, uint64 pa, uint64 sz, int perm)
     panic("kvmmap");
 }
 
+void
+kvmsupermap(pagetable_t kpgtbl, uint64 va, uint64 pa, uint64 sz, int perm)
+{
+  if(mapsuperpages(kpgtbl, va, sz, pa, perm) != 0)
+    panic("kvmsupermap");
+}
+
 // Create PTEs for virtual addresses starting at va that refer to
 // physical addresses starting at pa. va and size might not
 // be page-aligned. Returns 0 on success, -1 if walk() couldn't
@@ -155,6 +199,34 @@ mappages(pagetable_t pagetable, uint64 va, uint64 size, uint64 pa, int perm)
       break;
     a += PGSIZE;
     pa += PGSIZE;
+  }
+  return 0;
+}
+
+int
+mapsuperpages(pagetable_t pagetable, uint64 va, uint64 size, uint64 pa, int perm)
+{
+  uint64 a, last;
+  pte_t *pte;
+
+  if(size == 0)
+    panic("mappages: size");
+  
+  a = SUPERPGROUNDDOWN(va);
+  last = SUPERPGROUNDDOWN(va + size - 1);
+  for(;;){
+    if((pte = walk_level(pagetable, a, 1, 1)) == 0)
+      return -1;
+    if(*pte & PTE_V){
+      printf("remap: va=%p pa=%p pte=%p oldpte=%p\n",
+          a, pa, pte, *pte);
+      panic("mapsuperpages: remap");
+    }  
+    *pte = PA2PTE(pa) | perm | PTE_V;
+    if(a == last)
+      break;
+    a += SUPERPGSIZE;
+    pa += SUPERPGSIZE;
   }
   return 0;
 }
