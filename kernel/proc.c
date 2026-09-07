@@ -127,6 +127,8 @@ found:
     return 0;
   }
 
+  // Task1
+  // Allocate a usyscall page
   if((p->usyscall = (struct usyscall *)kalloc()) == 0){
     freeproc(p);
     release(&p->lock);
