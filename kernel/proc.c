@@ -42,6 +42,15 @@ proc_mapstacks(pagetable_t kpgtbl) {
   }
 }
 
+void
+proc_mapstack_specific(pagetable_t kpgtbl, struct proc *p) {
+  char *pa = kalloc();
+  if(pa == 0)
+    panic("kalloc");
+  uint64 va = KSTACK((int)(p - proc));
+  kvmmap(kpgtbl, va, (uint64)pa, PGSIZE, PTE_R | PTE_W);
+}
+
 // initialize the proc table at boot time.
 void
 procinit(void)
@@ -146,6 +155,9 @@ found:
     return 0;
   }
 
+  // Task4: An empty kernel page table
+  p->kernel_pagetable = prockvmmake(p);
+
   // Set up new context to start executing at forkret,
   // which returns to user space.
   memset(&p->context, 0, sizeof(p->context));
@@ -166,6 +178,8 @@ freeproc(struct proc *p)
   p->trapframe = 0;
   if(p->pagetable)
     proc_freepagetable(p->pagetable, p->sz);
+
+  // Task1
   if(p->usyscall)
     kfree((void*)p->usyscall);
   p->usyscall = 0;

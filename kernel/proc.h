@@ -107,4 +107,5 @@ struct proc {
   char name[16];               // Process name (debugging)
 
   struct usyscall *usyscall;   // Task1: speed up system calls
+  pagetable_t kernel_pagetable;  // Task4: 
 };

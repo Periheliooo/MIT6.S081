@@ -82,6 +82,40 @@ kvminithart()
   sfence_vma();
 }
 
+// Task4
+pagetable_t
+prockvmmake(struct proc *p)
+{
+  pagetable_t kpgtbl;
+
+  kpgtbl = (pagetable_t) kalloc();
+  memset(kpgtbl, 0, PGSIZE);
+
+  // uart registers
+  kvmmap(kpgtbl, UART0, UART0, PGSIZE, PTE_R | PTE_W);
+
+  // virtio mmio disk interface
+  kvmmap(kpgtbl, VIRTIO0, VIRTIO0, PGSIZE, PTE_R | PTE_W);
+
+  // PLIC
+  kvmmap(kpgtbl, PLIC, PLIC, 0x400000, PTE_R | PTE_W);
+
+  // map kernel text executable and read-only.
+  kvmmap(kpgtbl, KERNBASE, KERNBASE, (uint64)etext-KERNBASE, PTE_R | PTE_X);
+
+  // map kernel data and the physical RAM we'll make use of.
+  kvmmap(kpgtbl, (uint64)etext, (uint64)etext, PHYSTOP-(uint64)etext, PTE_R | PTE_W);
+
+  // map the trampoline for trap entry/exit to
+  // the highest virtual address in the kernel.
+  kvmmap(kpgtbl, TRAMPOLINE, (uint64)trampoline, PGSIZE, PTE_R | PTE_X);
+
+  // map kernel stacks
+  proc_mapstack_specific(kpgtbl, p);
+  
+  return kpgtbl;
+}
+
 // Return the address of the PTE in page table pagetable
 // that corresponds to virtual address va.  If alloc!=0,
 // create any required page-table pages.
