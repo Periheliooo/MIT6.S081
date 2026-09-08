@@ -20,6 +20,8 @@ static void freeproc(struct proc *p);
 
 extern char trampoline[]; // trampoline.S
 
+extern char etext[];
+
 // helps ensure that wakeups of wait()ing
 // parents are not lost. helps obey the
 // memory model when using p->parent.
@@ -157,6 +159,11 @@ found:
 
   // Task4: An empty kernel page table
   p->kernel_pagetable = prockvmmake(p);
+  if(p->kernel_pagetable == 0){
+    freeproc(p);
+    release(&p->lock);
+    return 0;
+  }
 
   // Set up new context to start executing at forkret,
   // which returns to user space.
@@ -182,6 +189,11 @@ freeproc(struct proc *p)
   // Task1
   if(p->usyscall)
     kfree((void*)p->usyscall);
+
+  // Task4
+  if(p->kernel_pagetable)
+    proc_freekpagetable(p->kernel_pagetable, p);
+
   p->usyscall = 0;
   p->pagetable = 0;
   p->sz = 0;
@@ -244,6 +256,20 @@ proc_freepagetable(pagetable_t pagetable, uint64 sz)
   uvmunmap(pagetable, TRAPFRAME, 1, 0);
   uvmunmap(pagetable, USYSCALL, 1, 0);
   uvmfree(pagetable, sz);
+}
+
+// Task 4
+void
+proc_freekpagetable(pagetable_t pagetable, struct proc *p)
+{
+  uvmunmap(pagetable, UART0, 1, 0);
+  uvmunmap(pagetable, VIRTIO0, 1, 0);
+  uvmunmap(pagetable, PLIC, 0x400000 / PGSIZE, 0);
+  uvmunmap(pagetable, KERNBASE, ((uint64)etext - KERNBASE) / PGSIZE, 0);
+  uvmunmap(pagetable, (uint64)etext, (PHYSTOP - (uint64)etext) / PGSIZE, 0);
+  uvmunmap(pagetable, TRAMPOLINE, 1, 0);
+  uvmunmap(pagetable, p->kstack, 1, 1);
+  freewalk(pagetable);
 }
 
 // a user program that calls exec("/init")
@@ -490,10 +516,13 @@ scheduler(void)
         // before jumping back to us.
         p->state = RUNNING;
         c->proc = p;
+        w_satp(MAKE_SATP(p->kernel_pagetable));
+        sfence_vma();
         swtch(&c->context, &p->context);
 
         // Process is done running for now.
         // It should have changed its p->state before coming back.
+        kvminithart();
         c->proc = 0;
       }
       release(&p->lock);

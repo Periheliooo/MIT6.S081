@@ -1,0 +1,4 @@
+创建proc的函数
+创建kpgtbl
+不需要init，直接make创建
+

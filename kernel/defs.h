@@ -107,6 +107,7 @@ void            procdump(void);
 
 pagetable_t     proc_kernelpagetable(struct proc *);
 void            proc_mapstack_specific(pagetable_t, struct proc *);
+void            proc_freekpagetable(pagetable_t, struct proc *);
 
 // swtch.S
 void            swtch(struct context*, struct context*);
@@ -177,8 +178,9 @@ int             copyin(pagetable_t, char *, uint64, uint64);
 int             copyinstr(pagetable_t, char *, uint64, uint64);
 void            vmprint(pagetable_t pagetable);
 pte_t*          walk(pagetable_t pagetable, uint64 va, int alloc);
+void            freewalk(pagetable_t);
 
-pagetable_t     prockvmmake(struct proc *p);
+pagetable_t     prockvmmake(struct proc *);
 
 // plic.c
 void            plicinit(void);
