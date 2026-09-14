@@ -89,6 +89,8 @@ prockvmmake(struct proc *p)
   pagetable_t kpgtbl;
 
   kpgtbl = (pagetable_t) kalloc();
+  if(kpgtbl == 0)
+    return 0;
   memset(kpgtbl, 0, PGSIZE);
 
   // uart registers
