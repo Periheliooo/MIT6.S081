@@ -298,8 +298,32 @@ uvmfree(pagetable_t pagetable, uint64 sz)
 // returns 0 on success, -1 on failure.
 // frees any allocated pages on failure.
 int
+uvmcopy_cow(pagetable_t old, pagetable_t new, uint64 sz)
+{
+  pte_t *pte;
+  uint64 pa, i;
+  uint flags;
+
+  for(i = 0; i < sz; i += PGSIZE){
+    if((pte = walk(old, i, 0)) == 0)
+      panic("uvmcopy: pte should exist");
+    if((*pte & PTE_V) == 0)
+      panic("uvmcopy: page not present");
+    pa = PTE2PA(*pte);
+    if (*pte & PTE_W) {
+      *pte = (*pte & ~PTE_W) | PTE_COW;
+    }
+    flags = PTE_FLAGS(*pte);
+    mappages(new, i, PGSIZE, pa, flags);
+  }
+  return 0;
+}
+
+int
 uvmcopy(pagetable_t old, pagetable_t new, uint64 sz)
 {
+  return uvmcopy_cow(old, new, sz);
+
   pte_t *pte;
   uint64 pa, i;
   uint flags;
