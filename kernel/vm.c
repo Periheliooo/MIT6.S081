@@ -314,9 +314,15 @@ uvmcopy_cow(pagetable_t old, pagetable_t new, uint64 sz)
       *pte = (*pte & ~PTE_W) | PTE_COW;
     }
     flags = PTE_FLAGS(*pte);
-    mappages(new, i, PGSIZE, pa, flags);
+    if(mappages(new, i, PGSIZE, pa, flags) != 0)
+      goto err;
+    kmap((void *)pa);
   }
   return 0;
+
+err:
+  uvmunmap(new, 0, i / PGSIZE, 1);
+  return -1;
 }
 
 int
