@@ -377,12 +377,28 @@ int
 copyout(pagetable_t pagetable, uint64 dstva, char *src, uint64 len)
 {
   uint64 n, va0, pa0;
+  uint flags;
+  pte_t *pte;
+  char *mem;
 
   while(len > 0){
     va0 = PGROUNDDOWN(dstva);
     pa0 = walkaddr(pagetable, va0);
     if(pa0 == 0)
       return -1;
+    pte = walk(pagetable, va0, 0);
+    if(pte == 0)
+      return -1;
+    if(*pte & PTE_COW){
+      if((mem = kalloc()) == 0)
+        return -1;
+      memmove(mem, (void *)pa0, PGSIZE);
+      flags = PTE_FLAGS(*pte);
+      *pte = PA2PTE((uint64)mem) | ((flags | PTE_W) & ~PTE_COW);
+      kfree((void *)pa0);
+      pa0 = (uint64)mem;
+    }
+
     n = PGSIZE - (dstva - va0);
     if(n > len)
       n = len;
