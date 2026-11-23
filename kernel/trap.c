@@ -102,6 +102,7 @@ usertrapret(void)
   intr_off();
 
   // send syscalls, interrupts, and exceptions to trampoline.S
+  // 恢复用户态的 Trap 入口
   w_stvec(TRAMPOLINE + (uservec - trampoline));
 
   // set up trapframe values that uservec will need when
@@ -115,12 +116,14 @@ usertrapret(void)
   // to get to user space.
   
   // set S Previous Privilege mode to User.
+  // 设置sstatus
   unsigned long x = r_sstatus();
   x &= ~SSTATUS_SPP; // clear SPP to 0 for user mode  进入U-mode
   x |= SSTATUS_SPIE; // enable interrupts in user mode
   w_sstatus(x);
 
   // set S Exception Program Counter to the saved user pc.
+  // 恢复sepc
   w_sepc(p->trapframe->epc);
 
   // tell trampoline.S the user page table to switch to.
@@ -192,6 +195,7 @@ devintr()
     // this is a supervisor external interrupt, via PLIC.
 
     // irq indicates which device interrupted.
+    // 是UART？disk？网卡？
     int irq = plic_claim();
 
     if(irq == UART0_IRQ){

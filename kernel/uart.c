@@ -2,12 +2,16 @@
 // low-level driver routines for 16550a UART.
 //
 
+// Structure
+// top queue : interaction with user; read/write interface
+// bottom Interrupt handler
+
 #include "types.h"
 #include "param.h"
 #include "memlayout.h"
 #include "riscv.h"
 #include "spinlock.h"
-#include "proc.h"
+#include "proc.h" 
 #include "defs.h"
 
 // the UART control registers are memory-mapped
@@ -49,11 +53,12 @@ extern volatile int panicked; // from printf.c
 
 void uartstart();
 
+// UART 是一种串行通信设备。QEMU 模拟的键盘输入会通过 UART 设备送到 xv6。
 void
 uartinit(void)
 {
   // disable interrupts.
-  WriteReg(IER, 0x00);
+  WriteReg(IER, 0x00);    // IER是UART硬件内部的寄存器
 
   // special mode to set baud rate.
   WriteReg(LCR, LCR_BAUD_LATCH);
@@ -72,7 +77,7 @@ uartinit(void)
   WriteReg(FCR, FCR_FIFO_ENABLE | FCR_FIFO_CLEAR);
 
   // enable transmit and receive interrupts.
-  WriteReg(IER, IER_TX_ENABLE | IER_RX_ENABLE);
+  WriteReg(IER, IER_TX_ENABLE | IER_RX_ENABLE);   // 告诉 UART 硬件, 如果收到字符，允许产生中断。如果发送状态变化，也允许产生中断。
 
   initlock(&uart_tx_lock, "uart");
 }

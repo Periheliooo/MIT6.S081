@@ -10,7 +10,9 @@ sub entry {
     my $name = shift;
     print ".global $name\n";
     print "${name}:\n";
-    print " li a7, SYS_${name}\n";
+    print " li a7, SYS_${name}\n";   # 把要调用的函数放到a7里
+                                     # a0～a5 存放系统调用参数
+                                     # 返回值最终放在 a0 中
     print " ecall\n";
     print " ret\n";
 }

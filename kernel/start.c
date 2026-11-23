@@ -17,6 +17,8 @@ uint64 timer_scratch[NCPU][5];
 extern void timervec();
 
 // entry.S jumps here in machine mode on stack0.
+// M-mode 机器级初始化、底层硬件控制
+// start() 的关键职责是为内核进入 S-mode 做准备，而 main() 才负责主要的内核初始化工作。
 void
 start()
 {
@@ -51,6 +53,9 @@ start()
   w_tp(id);
 
   // switch to supervisor mode and jump to main().
+  // 执行 mret 时，CPU 主要完成：
+  // 1. 将当前特权级切换为 mstatus.MPP 指定的级别。
+  // 2. 将 PC 设置为 mepc。
   asm volatile("mret");
 }
 

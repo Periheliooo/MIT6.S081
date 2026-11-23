@@ -184,6 +184,7 @@ consoleinit(void)
   initlock(&cons.lock, "cons");
 
   uartinit();   // 启动UART
+                // UART 是一种串行通信设备。QEMU 模拟的键盘输入会通过 UART 设备送到 xv6。
 
   // connect read and write system calls
   // to consoleread and consolewrite.

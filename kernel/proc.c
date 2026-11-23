@@ -138,7 +138,7 @@ found:
   // Set up new context to start executing at forkret,
   // which returns to user space.
   memset(&p->context, 0, sizeof(p->context));
-  p->context.ra = (uint64)forkret;
+  p->context.ra = (uint64)forkret;    // 它决定了进程第一次被调度时，从内核的 forkret() 开始执行。
   p->context.sp = p->kstack + PGSIZE;
 
   return p;
@@ -245,7 +245,7 @@ userinit(void)
   safestrcpy(p->name, "initcode", sizeof(p->name));
   p->cwd = namei("/");
 
-  p->state = RUNNABLE;
+  p->state = RUNNABLE;  // 此时，scheduler开始运行
 
   release(&p->lock);
 }
