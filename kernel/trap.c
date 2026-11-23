@@ -78,7 +78,7 @@ usertrap(void)
 
   // give up the CPU if this is a timer interrupt.
   if(which_dev == 2)
-    yield();
+    yield();  // 让当前进程主动让出 CPU，交给调度器（scheduler），由调度器决定接下来运行哪个进程。
 
   usertrapret();
 }
@@ -86,6 +86,11 @@ usertrap(void)
 //
 // return to user space
 //
+// 负责准备从内核态切换到用户态，包括：
+// 设置 stvec，使下一次来自用户态的 trap 进入 trampoline。
+// 设置 sstatus，使 sret 返回 U-mode。
+// 将 p->trapframe->epc 写入 sepc。
+// 跳转到 trampoline 中的 userret()。
 void
 usertrapret(void)
 {
@@ -111,7 +116,7 @@ usertrapret(void)
   
   // set S Previous Privilege mode to User.
   unsigned long x = r_sstatus();
-  x &= ~SSTATUS_SPP; // clear SPP to 0 for user mode
+  x &= ~SSTATUS_SPP; // clear SPP to 0 for user mode  进入U-mode
   x |= SSTATUS_SPIE; // enable interrupts in user mode
   w_sstatus(x);
 
@@ -126,6 +131,10 @@ usertrapret(void)
   // and switches to user mode with sret.
   uint64 fn = TRAMPOLINE + (userret - trampoline);
   ((void (*)(uint64,uint64))fn)(TRAPFRAME, satp);
+  // 整个 trampoline 页面被放在虚拟地址空间的最顶部，但 userret 仍然位于这个页面的较高地址处
+  // 栈通常向低地址增长，但代码段中的指令通常沿高地址方向排列。
+  // userret 和 trampoline 是内核链接地址
+  // trampoline代码是多-一，
 }
 
 // interrupts and exceptions from kernel code go here via kernelvec,

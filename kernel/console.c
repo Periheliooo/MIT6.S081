@@ -183,7 +183,7 @@ consoleinit(void)
 {
   initlock(&cons.lock, "cons");
 
-  uartinit();
+  uartinit();   // 启动UART
 
   // connect read and write system calls
   // to consoleread and consolewrite.

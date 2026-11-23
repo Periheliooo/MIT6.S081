@@ -16,12 +16,13 @@ extern char etext[];  // kernel.ld sets this to end of kernel code.
 extern char trampoline[]; // trampoline.S
 
 // Make a direct-map page table for the kernel.
+// 所有CPU核共享同一张kernel_pagetable
 pagetable_t
 kvmmake(void)
 {
   pagetable_t kpgtbl;
 
-  kpgtbl = (pagetable_t) kalloc();
+  kpgtbl = (pagetable_t) kalloc();    // 分配根页表
   memset(kpgtbl, 0, PGSIZE);
 
   // uart registers
@@ -53,7 +54,7 @@ kvmmake(void)
 void
 kvminit(void)
 {
-  kernel_pagetable = kvmmake();
+  kernel_pagetable = kvmmake();    // 该指针通常存在内核的bss区
 }
 
 // Switch h/w page table register to the kernel's page table,
@@ -77,6 +78,8 @@ kvminithart()
 //   21..29 -- 9 bits of level-1 index.
 //   12..20 -- 9 bits of level-0 index.
 //    0..11 -- 12 bits of byte offset within the page.
+// 沿着 Sv39 的三级页表查找页表项。
+// 如果中间某一级页表尚不存在，就利用 kalloc() 分配一页，填好上级页表项，然后继续向下走。
 pte_t *
 walk(pagetable_t pagetable, uint64 va, int alloc)
 {
@@ -180,9 +183,9 @@ uvmunmap(pagetable_t pagetable, uint64 va, uint64 npages, int do_free)
       panic("uvmunmap: not a leaf");
     if(do_free){
       uint64 pa = PTE2PA(*pte);
-      kfree((void*)pa);
+      kfree((void*)pa);   // 可选择是否释放物理页
     }
-    *pte = 0;
+    *pte = 0;  // pte内容清零，就是删除映射
   }
 }
 
@@ -263,6 +266,7 @@ uvmdealloc(pagetable_t pagetable, uint64 oldsz, uint64 newsz)
 
 // Recursively free page-table pages.
 // All leaf mappings must already have been removed.
+// 只拆除树结构
 void
 freewalk(pagetable_t pagetable)
 {
@@ -283,6 +287,7 @@ freewalk(pagetable_t pagetable)
 
 // Free user memory pages,
 // then free page-table pages.
+// 很巧妙的办法，通过遍历va来找到所有的叶子。
 void
 uvmfree(pagetable_t pagetable, uint64 sz)
 {

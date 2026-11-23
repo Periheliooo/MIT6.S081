@@ -237,6 +237,9 @@ userinit(void)
 
   // prepare for the very first "return" from kernel to user.
   p->trapframe->epc = 0;      // user program counter
+                              // 预设置，sret后，CPU将第一次在U-mode下，
+                              // 从用户虚拟地址0x0执行user/initcode.S指令，
+                              // 通过ecall发起exec("/init", argv)系统调用
   p->trapframe->sp = PGSIZE;  // user stack pointer
 
   safestrcpy(p->name, "initcode", sizeof(p->name));
@@ -498,7 +501,7 @@ yield(void)
   struct proc *p = myproc();
   acquire(&p->lock);
   p->state = RUNNABLE;
-  sched();
+  sched();  // 切换上下文
   release(&p->lock);
 }
 
@@ -510,7 +513,7 @@ forkret(void)
   static int first = 1;
 
   // Still holding p->lock from scheduler.
-  release(&myproc()->lock);
+  release(&myproc()->lock);   // 释放进程锁
 
   if (first) {
     // File system initialization must be run in the context of a

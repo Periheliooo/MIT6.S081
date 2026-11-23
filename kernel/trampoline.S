@@ -10,7 +10,7 @@
         #
 	.section trampsec
 .globl trampoline
-trampoline:
+trampoline:     # 在下面
 .align 4
 .globl uservec
 uservec:    
@@ -138,4 +138,5 @@ userret:
         
         # return to user mode and user pc.
         # usertrapret() set up sstatus and sepc.
-        sret
+        sret    
+        # 将 PC 设置为 sepc 中保存的地址，根据 sstatus.SPP 决定返回后的特权级

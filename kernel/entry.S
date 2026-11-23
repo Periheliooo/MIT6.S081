@@ -19,3 +19,8 @@ _entry:
         call start
 spin:
         j spin
+
+
+# CPU 0: _entry → start() → main() → scheduler()
+# CPU 1: _entry → start() → main() → scheduler()
+# CPU 2: _entry → start() → main() → scheduler()
