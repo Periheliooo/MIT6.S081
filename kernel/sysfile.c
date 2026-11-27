@@ -298,8 +298,9 @@ sys_open(void)
   if((n = argstr(0, path, MAXPATH)) < 0 || argint(1, &omode) < 0)
     return -1;
 
-  begin_op();
+  begin_op(); // 开启一个事务
 
+  // Phase 1
   if(omode & O_CREATE){
     ip = create(path, T_FILE, 0, 0);
     if(ip == 0){
@@ -307,7 +308,7 @@ sys_open(void)
       return -1;
     }
   } else {
-    if((ip = namei(path)) == 0){
+    if((ip = namei(path)) == 0){  // namei()通过逐级查找目录项，将路径转换为 inode。
       end_op();
       return -1;
     }
@@ -325,7 +326,10 @@ sys_open(void)
     return -1;
   }
 
+  // Phase 2
   if((f = filealloc()) == 0 || (fd = fdalloc(f)) < 0){
+    // filealloc() 从全局的 ftable.file[] 中寻找空闲的 struct file。
+    // fdalloc() 从当前进程的 ofile[] 中寻找空闲位置：
     if(f)
       fileclose(f);
     iunlockput(ip);
@@ -333,6 +337,7 @@ sys_open(void)
     return -1;
   }
 
+  // Phase 3 初始化 struct file
   if(ip->type == T_DEVICE){
     f->type = FD_DEVICE;
     f->major = ip->major;
@@ -340,7 +345,7 @@ sys_open(void)
     f->type = FD_INODE;
     f->off = 0;
   }
-  f->ip = ip;
+  f->ip = ip; // 关联到 inode
   f->readable = !(omode & O_WRONLY);
   f->writable = (omode & O_WRONLY) || (omode & O_RDWR);
 
@@ -348,6 +353,7 @@ sys_open(void)
     itrunc(ip);
   }
 
+  // Phase 4 释放锁
   iunlock(ip);
   end_op();
 
