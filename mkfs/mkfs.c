@@ -108,13 +108,13 @@ main(int argc, char *argv[])
   freeblock = nmeta;     // the first free block that we can allocate
 
   for(i = 0; i < FSSIZE; i++)
-    wsect(i, zeroes);
+    wsect(i, zeroes);    // 所有块清零
 
   memset(buf, 0, sizeof(buf));
   memmove(buf, &sb, sizeof(sb));
-  wsect(1, buf);
+  wsect(1, buf);  // 写入superblock
 
-  rootino = ialloc(T_DIR);
+  rootino = ialloc(T_DIR);  // 分配根目录 inode
   assert(rootino == ROOTINO);
 
   bzero(&de, sizeof(de));

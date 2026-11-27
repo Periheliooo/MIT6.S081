@@ -25,12 +25,12 @@
 
 struct {
   struct spinlock lock;
-  struct buf buf[NBUF];
+  struct buf buf[NBUF]; // 固定数量的缓存槽，每个槽能缓存一个磁盘 block。这里NBUF = 30
 
   // Linked list of all buffers, through prev/next.
   // Sorted by how recently the buffer was used.
   // head.next is most recent, head.prev is least.
-  struct buf head;
+  struct buf head;  // 用于管理缓存槽的双向链表的哨兵节点。
 } bcache;
 
 void
@@ -38,18 +38,19 @@ binit(void)
 {
   struct buf *b;
 
-  initlock(&bcache.lock, "bcache");
+  initlock(&bcache.lock, "bcache"); // bcache.lock 保护缓存槽的查找、引用计数和链表操作
 
   // Create linked list of buffers
   bcache.head.prev = &bcache.head;
   bcache.head.next = &bcache.head;
-  for(b = bcache.buf; b < bcache.buf+NBUF; b++){
+  for(b = bcache.buf; b < bcache.buf+NBUF; b++){  // 头插法
     b->next = bcache.head.next;
     b->prev = &bcache.head;
-    initsleeplock(&b->lock, "buffer");
+    initsleeplock(&b->lock, "buffer");  // 保护具体 block 的数据访问，防止两个线程同时修改同一个 block
     bcache.head.next->prev = b;
     bcache.head.next = b;
   }
+  // head->buf[29]->buf[28]-> ->buf[0]-> 双向
 }
 
 // Look through buffer cache for block on device dev.

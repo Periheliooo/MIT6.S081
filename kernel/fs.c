@@ -200,13 +200,13 @@ ialloc(uint dev, short type)
   struct dinode *dip;
 
   for(inum = 1; inum < sb.ninodes; inum++){
-    bp = bread(dev, IBLOCK(inum, sb));
-    dip = (struct dinode*)bp->data + inum%IPB;
+    bp = bread(dev, IBLOCK(inum, sb));  // 读取 inode 所在的 block
+    dip = (struct dinode*)bp->data + inum%IPB;  // 在 block 内部定位 inode
     if(dip->type == 0){  // a free inode
       memset(dip, 0, sizeof(*dip));
       dip->type = type;
       log_write(bp);   // mark it allocated on the disk
-      brelse(bp);
+      brelse(bp); // 释放当前进程对这个 buffer 的使用权
       return iget(dev, inum);
     }
     brelse(bp);
@@ -374,6 +374,7 @@ iunlockput(struct inode *ip)
 
 // Return the disk block address of the nth block in inode ip.
 // If there is no such block, bmap allocates one.
+// 将文件内部的逻辑 block number 转换成磁盘上的实际 block number，并在需要时分配磁盘块。
 static uint
 bmap(struct inode *ip, uint bn)
 {
@@ -391,7 +392,7 @@ bmap(struct inode *ip, uint bn)
     // Load indirect block, allocating if necessary.
     if((addr = ip->addrs[NDIRECT]) == 0)
       ip->addrs[NDIRECT] = addr = balloc(ip->dev);
-    bp = bread(ip->dev, addr);
+    bp = bread(ip->dev, addr);  // bread 就是 buffer cache 层提供的接口，将 indirect block 读入内存。
     a = (uint*)bp->data;
     if((addr = a[bn]) == 0){
       a[bn] = addr = balloc(ip->dev);

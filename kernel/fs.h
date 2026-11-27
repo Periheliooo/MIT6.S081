@@ -29,6 +29,8 @@ struct superblock {
 #define MAXFILE (NDIRECT + NINDIRECT)
 
 // On-disk inode structure
+// 每个磁盘 inode 占 64 字节，Block 大小为 1024 字节
+// 因此一个 Inode Block 能保存 16 个磁盘 inode
 struct dinode {
   short type;           // File type
   short major;          // Major device number (T_DEVICE only)
@@ -53,6 +55,7 @@ struct dinode {
 // Directory is a file containing a sequence of dirent structures.
 #define DIRSIZ 14
 
+// 文件名 → inode number
 struct dirent {
   ushort inum;
   char name[DIRSIZ];

@@ -200,6 +200,7 @@ alloc3_desc(int *idx)
   return 0;
 }
 
+// 负责向磁盘设备发起读写请求
 void
 virtio_disk_rw(struct buf *b, int write)
 {
@@ -223,6 +224,7 @@ virtio_disk_rw(struct buf *b, int write)
   // format the three descriptors.
   // qemu's virtio-blk.c reads them.
 
+  // 第一个desc：告诉磁盘要干什么
   struct virtio_blk_req *buf0 = &disk.ops[idx[0]];
 
   if(write)
@@ -237,6 +239,7 @@ virtio_disk_rw(struct buf *b, int write)
   disk.desc[idx[0]].flags = VRING_DESC_F_NEXT;
   disk.desc[idx[0]].next = idx[1];
 
+  // 第二个desc：告诉磁盘数据放在哪里
   disk.desc[idx[1]].addr = (uint64) b->data;
   disk.desc[idx[1]].len = BSIZE;
   if(write)
@@ -246,6 +249,7 @@ virtio_disk_rw(struct buf *b, int write)
   disk.desc[idx[1]].flags |= VRING_DESC_F_NEXT;
   disk.desc[idx[1]].next = idx[2];
 
+  // 第三个desc：告诉磁盘把执行结果放在哪里
   disk.info[idx[0]].status = 0xff; // device writes 0 on success
   disk.desc[idx[2]].addr = (uint64) &disk.info[idx[0]].status;
   disk.desc[idx[2]].len = 1;

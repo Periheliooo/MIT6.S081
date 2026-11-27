@@ -159,12 +159,12 @@ filewrite(struct file *f, uint64 addr, int n)
       if(n1 > max)
         n1 = max;
 
-      begin_op();
+      begin_op(); // 预留日志空间，outstanding++
       ilock(f->ip);
       if ((r = writei(f->ip, 1, addr + i, f->off, n1)) > 0)
         f->off += r;
       iunlock(f->ip);
-      end_op();
+      end_op(); // outstanding--，判断是否可以提交
 
       if(r != n1){
         // error from writei

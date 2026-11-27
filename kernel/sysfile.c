@@ -238,18 +238,20 @@ bad:
   return -1;
 }
 
+// create函数中首先会解析路径名并找到最后一个目录，之后会查看文件是否存在，如果存在的话会返回错误。
+// 之后就会调用ialloc（inode allocate），这个函数会为文件x分配inode。
 static struct inode*
 create(char *path, short type, short major, short minor)
 {
   struct inode *ip, *dp;
   char name[DIRSIZ];
 
-  if((dp = nameiparent(path, name)) == 0)
+  if((dp = nameiparent(path, name)) == 0) // 找到父目录 /y 的 inode，将 x 保存到 name
     return 0;
 
   ilock(dp);
 
-  if((ip = dirlookup(dp, name, 0)) != 0){
+  if((ip = dirlookup(dp, name, 0)) != 0){  // 检查目录中是否已经存在 x
     iunlockput(dp);
     ilock(ip);
     if(type == T_FILE && (ip->type == T_FILE || ip->type == T_DEVICE))
@@ -283,6 +285,7 @@ create(char *path, short type, short major, short minor)
   return ip;
 }
 
+// 分配inode发生在sys_open函数中，这个函数会负责创建文件。
 uint64
 sys_open(void)
 {

@@ -99,6 +99,7 @@ read_head(void)
 // Write in-memory log header to disk.
 // This is the true point at which the
 // current transaction commits.
+// 提交点
 static void
 write_head(void)
 {
